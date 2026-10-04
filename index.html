@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快眠ナイトルーティン逆算シミュレーター</title>
+    <style>
+        /* --- Base & Reset Styles --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background: radial-gradient(circle at 50% 50%, #11132e 0%, #070814 100%);
+            color: #f1f5f9;
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* 背景の星空エフェクト（CSSのみ） */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 40px 70px, #e2e8f0, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 50px 160px, #fef08a, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 80px 120px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 110px 210px, #cbd5e1, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 150px 130px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 200px 50px, #fef08a, rgba(0,0,0,0));
+            background-size: 300px 300px;
+            animation: pulseStars 6s ease-in-out infinite alternate;
+            opacity: 0.4;
+        }
+
+        @keyframes pulseStars {
+            0% { opacity: 0.3; transform: scale(1); }
+            100% { opacity: 0.6; transform: scale(1.02); }
+        }
+
+        /* --- Layout --- */
+        header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .header-logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .header-logo svg {
+            width: 40px;
+            height: 40px;
+            fill: #fef08a;
+            filter: drop-shadow(0 0 8px rgba(254, 240, 138, 0.6));
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #fef08a, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px 60px;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 30px;
+            position: relative;
+            z-index: 10;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- Component Blocks (Glassmorphism) --- */
+        .card {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            margin-bottom: 25px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+
+        .card-title svg {
+            width: 22px;
+            height: 22px;
+            color: #a5b4fc;
+        }
+
+        /* --- Settings Form --- */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="time"], select {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input[type="time"]:focus, select:focus {
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25);
+            background: rgba(30, 41, 59, 0.9);
+        }
+
+        /* --- Sleep Score Panel --- */
+        .score-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 14px;
+            padding: 15px 20px;
+            margin-top: 10px;
+        }
+
+        .score-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: conic-gradient(#818cf8 var(--score-deg, 0deg), rgba(255,255,255,0.05) 0deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .score-circle::before {
+            content: '';
+            position: absolute;
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: #0f172a;
+        }
+
+        .score-value {
+            position: relative;
+            z-index: 1;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fef08a;
+        }
+
+        .score-info {
+            flex: 1;
+        }
+
+        .score-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .sleep-duration {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .sleep-advice {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+
+        /* --- Timeline Progress --- */
+        .progress-wrapper {
+            margin-bottom: 25px;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #3b82f6, #818cf8, #ec4899);
+            border-radius: 9999px;
+            transition: width 0.4s ease;
+        }
+
+        /* --- Timeline --- */
+        .timeline {
+            position: relative;
+            padding-left: 10px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 45px;
+            padding-bottom: 25px;
+            transition: all 0.3s ease;
+        }
+
+        /* タイムラインの縦線 */
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 40px;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.08);
+            z-index: 1;
+        }
+
+        .timeline-item:last-child::before {
+            display: none;
+        }
+
+        .timeline-badge {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            color: #94a3b8;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-badge svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .timeline-content {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 14px;
+            padding: 16px 20px;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .time-and-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .timeline-time {
+            font-family: monospace;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #fef08a;
+            background: rgba(254, 240, 138, 0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        .timeline-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .timeline-desc {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        /* バッジと状態デザイン */
+        .badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-active {
+            background: #ef4444;
+            color: #fff;
+            animation: pulse 2s infinite;
+        }
+
+        .badge-next {
+            background: #f59e0b;
+            color: #fff;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { transform: scale(1.03); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* 状態クラスのスタイル適用 */
+        /* 1. 完了状態 (Completed) */
+        .timeline-item.completed .timeline-badge {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
+            color: #34d399;
+        }
+        .timeline-item.completed .timeline-content {
+            background: rgba(16, 185, 129, 0.03);
+            border-color: rgba(16, 185, 129, 0.15);
+            opacity: 0.75;
+        }
+        .timeline-item.completed .timeline-title {
+            text-decoration: line-through;
+            color: #94a3b8;
+        }
+
+        /* 2. 現在アクティブ状態 (Active) */
+        .timeline-item.active .timeline-badge {
+            background: rgba(99, 102, 241, 0.3);
+            border-color: #818cf8;
+            color: #a5b4fc;
+            box-shadow: 0 0 15px rgba(129, 140, 248, 0.5);
+        }
+        .timeline-item.active .timeline-content {
+            background: rgba(99, 102, 241, 0.08);
+            border-color: rgba(129, 140, 248, 0.3);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+        }
+        .timeline-item.active::before {
+            background: linear-gradient(to bottom, #818cf8, rgba(255,255,255,0.08));
+        }
+
+        /* 3. 過去の状態 (Passed) */
+        .timeline-item.passed:not(.completed) .timeline-content {
+            opacity: 0.6;
+        }
+
+        /* --- Custom Checkbox --- */
+        .checkbox-container {
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            gap: 8px;
+        }
+
+        .checkbox-container input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+
+        .checkmark {
+            height: 18px;
+            width: 18px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            display: inline-block;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-container:hover input ~ .checkmark {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .checkbox-container input:checked ~ .checkmark {
+            background-color: #10b981;
+            border-color: #10b981;
+        }
+
+        .checkmark:after {
+            content: "";
+            position: absolute;
+            display: none;
+            left: 5px;
+            top: 2px;
+            width: 5px;
+            height: 9px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .checkbox-container input:checked ~ .checkmark:after {
+            display: block;
+        }
+
+        /* --- Breathing Exercise Block --- */
+        .breath-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px 10px;
+            background: rgba(15, 23, 42, 0.3);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .breath-circle-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+        }
+
+        .breath-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(129, 140, 248, 0.6) 0%, rgba(79, 70, 229, 0.6) 100%);
+            box-shadow: 0 0 25px rgba(99, 102, 241, 0.4);
+            transition: transform 1s ease-in-out, background 1s ease-in-out;
+            will-change: transform;
+        }
+
+        .breath-overlay-text {
+            position: absolute;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #fff;
+            text-align: center;
+            pointer-events: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .breath-timer {
+            font-family: monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .btn-breath {
+            background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            margin-top: 5px;
+        }
+
+        .btn-breath:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-breath:active {
+            transform: translateY(1px);
+        }
+
+        /* --- Tips / Accordion --- */
+        .tips-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tips-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px 16px;
+        }
+
+        .tips-header {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #a5b4fc;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tips-content {
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            line-height: 1.4;
+        }
+
+        /* --- Utility Classes --- */
+        .text-center { text-align: center; }
+        .mt-20 { margin-top: 20px; }
+        .reset-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #94a3b8;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .reset-btn:hover {
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stars"></div>
+
+    <header>
+        <div class="header-logo">
+            <!-- Moon and Stars SVG -->
+            <svg viewBox="0 0 24 24">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                <path d="M19 3v4M21 5h-4M15 1v2M16 2h-2" stroke="#fff" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <h1>快眠ナイトルーティン逆算シミュレーター</h1>
+        <p>心地よい眠りは、夜の準備から始まります。希望の就寝時間から、お風呂、食事、スマホオフなどの最適なタイミングを逆算し、今夜の行動ロードマップを作成します。</p>
+    </header>
+
+    <div class="container">
+        <!-- LEFT COLUMN: Settings & Tools -->
+        <div class="left-column">
+            <!-- Settings Card -->
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span>シミュレーション設定</span>
+                </div>
+                
+                <div class="form-group-row">
+                    <div class="form-group">
+                        <label for="sleep-time">希望の就寝時間</label>
+                        <input type="time" id="sleep-time" value="23:00">
+                    </div>
+                    <div class="form-group">
+                        <label for="wake-time">希望の起床時間</label>
+                        <input type="time" id="wake-time" value="06:30">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="setting-bath">入浴スタイル</label>
+                    <select id="setting-bath">
+                        <option value="90">しっかりお湯に浸かる（就寝90分前）</option>
+                        <option value="60">シャワーで済ませる（就寝60分前）</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="setting-phone">デジタルデトックス（スマホ・PCオフ）</label>
+                    <select id="setting-phone">
+                        <option value="60">しっかり1時間前（推奨）</option>
+                        <option value="30">忙しい人向け30分前</option>
+                        <option value="0">消灯と同時（非推奨）</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="setting-dinner">夕食のボリューム</label>
+                    <select id="setting-dinner">
+                        <option value="180">通常の食事（就寝3時間前まで）</option>
+                        <option value="120">軽めの夕食・夜食（就寝2時間前まで）</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Sleep Analysis Card -->
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    <span>睡眠分析 & スコア</span>
+                </div>
+                <div class="score-container">
+                    <div class="score-circle" id="score-circle">
+                        <div class="score-value" id="sleep-score-val">95点</div>
+                    </div>
+                    <div class="score-info">
+                        <div class="score-label">計算された睡眠時間</div>
+                        <div class="sleep-duration" id="sleep-duration-val">7時間30分</div>
+                    </div>
+                </div>
+                <p class="sleep-advice" id="sleep-advice-text">理想的な睡眠時間です。すっきりとした目覚めが期待できます。</p>
+            </div>
+
+            <!-- Relax breathing Card -->
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                    <span>眠りを誘う「4-7-8呼吸法」</span>
+                </div>
+                <p class="sleep-advice" style="margin-bottom: 15px;">自律神経を整え、脳をリラックスモードへ導く有名な呼吸法です。布団に入る直前やリラックスタイムにお試しください。</p>
+                <div class="breath-wrapper">
+                    <div class="breath-circle-container">
+                        <div class="breath-circle" id="breath-circle"></div>
+                        <div class="breath-overlay-text">
+                            <span id="breath-status">呼吸法を始める</span>
+                            <span class="breath-timer" id="breath-timer"></span>
+                        </div>
+                    </div>
+                    <button class="btn-breath" id="btn-breath-toggle" onclick="toggleBreathing()">スタート</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Simulation Timeline -->
+        <div class="right-column">
+            <!-- Timeline Card -->
+            <div class="card" style="margin-bottom: 0;">
+                <div class="card-title" style="justify-content: space-between;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="18" y2="10"/></svg>
+                        <span>今夜の快眠ロードマップ</span>
+                    </span>
+                    <button class="reset-btn" onclick="resetChecks()">記録をリセット</button>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="progress-wrapper">
+                    <div class="progress-info">
+                        <span id="progress-text" style="font-weight: 600; color: #a5b4fc;">快眠準備度: 0%</span>
+                        <span id="progress-count" style="color: #94a3b8;">0 / 5 項目</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="progress-bar"></div>
+                    </div>
+                </div>
+
+                <!-- Interactive Timeline Container -->
+                <div class="timeline" id="timeline-container">
+                    <!-- Dynamic rendering by JS -->
+                </div>
+            </div>
+
+            <!-- Sleep Tips -->
+            <div class="card" style="margin-top: 25px;">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>快眠クオリティを高めるTips</span>
+                </div>
+                <div class="tips-list">
+                    <div class="tips-item">
+                        <div class="tips-header">💡 深部体温のコントロール</div>
+                        <div class="tips-content">お風呂で一度体温を上げると、90分ほどかけて急激に下がります。この「下がっていく落差」が強い眠気を引き起こします。</div>
+                    </div>
+                    <div class="tips-item">
+                        <div class="tips-header">💡 光環境の調整</div>
+                        <div class="tips-content">スマホオフの時間以降は、部屋の照明を暖色系の間接照明にするのが理想です。強い白光は脳を覚醒させます。</div>
+                    </div>
+                    <div class="tips-item">
+                        <div class="tips-header">💡 カフェイン・アルコールの罠</div>
+                        <div class="tips-content">カフェインは就寝の5〜6時間前まで、アルコールは一見眠くなりますが睡眠の質（レム睡眠）を著しく下げるため、晩酌は控えめに。</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Scripts -->
+    <script>
+        // --- Routine Template Definition ---
+        const routineTemplates = [
+            { id: 'dinner', name: '夕食を済ませる', typeKey: 'setting_dinner', icon: 'dinner', desc: '胃腸の消化活動を終えてから眠ることで、睡眠中の内臓の休息を確保し、中途覚醒を防ぎます。' },
+            { id: 'bath', name: 'お風呂を済ませる', typeKey: 'setting_bath', icon: 'bath', desc: '湯船にしっかり浸かることで、深部体温を一時的に上げます。これが90分かけて下がるときに強い眠気が生まれます。' },
+            { id: 'phone', name: 'デジタルデトックス', typeKey: 'setting_phone', icon: 'phone', desc: 'スマホやPCの画面を遮断します。ブルーライトの刺激を無くし、睡眠ホルモン「メラトニン」の分泌を促進します。' },
+            { id: 'relax', name: 'リラックスタイム', staticMinus: 30, icon: 'relax', desc: '軽いストレッチ、読書、アロマ、ノンカフェインのハーブティーなどで、副交感神経を優位に切り替えます。' },
+            { id: 'sleep', name: '就寝・消灯', staticMinus: 0, icon: 'sleep', desc: '部屋を暗く、少し涼しい適温（18〜22℃）に整えて布団に入ります。今日もお疲れ様でした。' }
+        ];
+
+        // --- SVG Icons Database ---
+        const icons = {
+            dinner: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v8c0 1.1.9 2 2 2h1a2 2 0 0 0 2-2z"/><path d="M18 17v5"/></svg>`,
+            bath: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h20v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2z"/><path d="M4 14c1 0 2-1 2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v6c0 1 1 2 2 2"/><path d="M7 2h10"/></svg>`,
+            phone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/><path d="m3 3 18 18"/></svg>`,
+            relax: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
+            sleep: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>`
+        };
+
+        // --- App State & Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedSettings();
+            checkAndResetCheckedStateDaily();
+            renderTimeline();
+            setupEventListeners();
+            
+            // 1分ごとに現在時刻とタイムラインの照らし合わせを更新
+            setInterval(() => {
+                renderTimeline();
+            }, 60000);
+        });
+
+        function setupEventListeners() {
+            const inputs = ['sleep-time', 'wake-time', 'setting-bath', 'setting-phone', 'setting-dinner'];
+            inputs.forEach(id => {
+                document.getElementById(id).addEventListener('change', () => {
+                    saveSettings();
+                    renderTimeline();
+                });
+            });
+        }
+
+        // --- LocalStorage Logic ---
+        function loadSavedSettings() {
+            if (localStorage.getItem('sleep_time')) {
+                document.getElementById('sleep-time').value = localStorage.getItem('sleep_time');
+                document.getElementById('wake-time').value = localStorage.getItem('wake_time');
+                document.getElementById('setting-bath').value = localStorage.getItem('setting_bath');
+                document.getElementById('setting-phone').value = localStorage.getItem('setting_phone');
+                document.getElementById('setting-dinner').value = localStorage.getItem('setting_dinner');
+            }
+        }
+
+        function saveSettings() {
+            localStorage.setItem('sleep_time', document.getElementById('sleep-time').value);
+            localStorage.setItem('wake_time', document.getElementById('wake-time').value);
+            localStorage.setItem('setting_bath', document.getElementById('setting-bath').value);
+            localStorage.setItem('setting_phone', document.getElementById('setting-phone').value);
+            localStorage.setItem('setting_dinner', document.getElementById('setting-dinner').value);
+        }
+
+        function checkAndResetCheckedStateDaily() {
+            const todayStr = new Date().toLocaleDateString();
+            const lastSavedDate = localStorage.getItem('last_active_date');
+            if (lastSavedDate !== todayStr) {
+                // 日付が変わったら完了チェックをリセット
+                routineTemplates.forEach(item => {
+                    localStorage.removeItem(`checked_${item.id}`);
+                });
+                localStorage.setItem('last_active_date', todayStr);
+            }
+        }
+
+        // --- Calculation Logic ---
+        function calculateSleepDuration(sleepStr, wakeStr) {
+            const [sH, sM] = sleepStr.split(':').map(Number);
+            const [wH, wM] = wakeStr.split(':').map(Number);
+            
+            let diffMs = (new Date(2020, 0, 2, wH, wM)) - (new Date(2020, 0, 1, sH, sM));
+            let diffMins = Math.floor(diffMs / 1000 / 60);
+            
+            if (diffMins < 0) diffMins += 24 * 60;
+            if (diffMins >= 24 * 60) diffMins -= 24 * 60;
+            
+            const h = Math.floor(diffMins / 60);
+            const m = diffMins % 60;
+            return { hours: h, minutes: m, totalMinutes: diffMins };
+        }
+
+        function getTargetDates(sleepTimeStr, items) {
+            const now = new Date();
+            const [sH, sM] = sleepTimeStr.split(':').map(Number);
+            
+            // 就寝ターゲット日時を決定
+            let sleepDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), sH, sM, 0);
+            
+            // 就寝時間が深夜(朝5時前)かつ、現在時刻が昼12時以降なら「明日の未明」に寝ると仮定
+            if (sH < 5 && now.getHours() >= 12) {
+                sleepDate.setDate(sleepDate.getDate() + 1);
+            }
+            // 逆に、就寝時間が深夜で、現在も深夜(3時など)なら「今日」の未明
+            
+            return items.map(item => {
+                const taskDate = new Date(sleepDate.getTime());
+                const minus = item.staticMinus !== undefined ? item.staticMinus : parseInt(document.getElementById(item.typeKey).value);
+                taskDate.setMinutes(taskDate.getMinutes() - minus);
+                return {
+                    ...item,
+                    date: taskDate,
+                    minusValue: minus
+                };
+            });
+        }
+
+        function formatTime(date) {
+            const h = String(date.getHours()).padStart(2, '0');
+            const m = String(date.getMinutes()).padStart(2, '0');
+            return `${h}:${m}`;
+        }
+
+        // --- Render UI ---
+        function renderTimeline() {
+            const sleepTime = document.getElementById('sleep-time').value;
+            const wakeTime = document.getElementById('wake-time').value;
+            
+            // 1. 睡眠時間とスコア算出
+            const sleepInfo = calculateSleepDuration(sleepTime, wakeTime);
+            const sleepHours = sleepInfo.hours + (sleepInfo.minutes / 60);
+            
+            document.getElementById('sleep-duration-val').innerText = `${sleepInfo.hours}時間${sleepInfo.minutes > 0 ? sleepInfo.minutes + '分' : ''}`;
+            
+            let score = 100;
+            let advice = "";
+            
+            if (sleepHours < 6) {
+                score = 55;
+                advice = "睡眠時間が6時間未満と短めです。日中の集中力低下や疲労の蓄積を招く恐れがあります。目標就寝を早めることをおすすめします。";
+            } else if (sleepHours >= 6 && sleepHours < 7) {
+                score = 80;
+                advice = "最低限の睡眠時間は確保できています。さらにスッキリ目覚めるために、今夜のルーティンを守り「眠りの質」を極限まで高めましょう！";
+            } else if (sleepHours >= 7 && sleepHours <= 8.5) {
+                score = 98;
+                advice = "理想的な睡眠時間です！健康、美容、パフォーマンスの維持に最適なサイクルです。この調子で今夜のルーティンを実践しましょう。";
+            } else {
+                score = 75;
+                advice = "睡眠時間が8.5時間を超え、やや長めです。長く寝すぎると体内時計がズレて体が怠くなることも。時間は十分ですので「質」を重視しましょう。";
+            }
+
+            // 就寝時間が深夜2時以降の場合の減点
+            const sH = parseInt(sleepTime.split(':')[0]);
+            if (sH >= 2 && sH < 5) {
+                score -= 15;
+                advice += " 深夜2時以降の就寝は、成長ホルモンの分泌効率を下げます。できれば24時前の就寝がベストです。";
+            }
+
+            // スコアUIの更新
+            document.getElementById('sleep-score-val').innerText = `${score}点`;
+            document.getElementById('sleep-advice-text').innerText = advice;
+            document.getElementById('score-circle').style.setProperty('--score-deg', `${(score / 100) * 360}deg`);
+
+            // 2. タイムラインの逆算と生成
+            const calculatedTasks = getTargetDates(sleepTime, routineTemplates);
+            
+            // 時間の早い順（マイナス値が大きい順）にソート
+            calculatedTasks.sort((a, b) => a.date - b.date);
+
+            const now = new Date();
+            let activeIndex = -1;
+            
+            // 現在どのタスク区間にいるか判定
+            for (let i = 0; i < calculatedTasks.length; i++) {
+                if (now >= calculatedTasks[i].date) {
+                    activeIndex = i;
+                }
+            }
+
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = '';
+
+            calculatedTasks.forEach((task, idx) => {
+                const isChecked = localStorage.getItem(`checked_${task.id}`) === 'true';
+                
+                let statusClass = 'upcoming';
+                let badgeHtml = '';
+                
+                if (idx === activeIndex) {
+                    statusClass = 'active';
+                    badgeHtml = `<span class="badge badge-active">NOW</span>`;
+                } else if (idx === activeIndex + 1) {
+                    badgeHtml = `<span class="badge badge-next">NEXT</span>`;
+                } else if (idx < activeIndex) {
+                    statusClass = 'passed';
+                }
+
+                const timeStr = formatTime(task.date);
+                const itemHtml = `
+                    <div class="timeline-item ${statusClass} ${isChecked ? 'completed' : ''}" id="item-${task.id}">
+                        <div class="timeline-badge">
+                            ${icons[task.icon]}
+                        </div>
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <div class="time-and-title">
+                                    <span class="timeline-time">${timeStr}</span>
+                                    <h3 class="timeline-title">${task.name}</h3>
+                                </div>
+                                ${badgeHtml}
+                            </div>
+                            <p class="timeline-desc">${task.desc}</p>
+                            <div class="timeline-footer">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="chk-${task.id}" ${isChecked ? 'checked' : ''} onchange="toggleTask('${task.id}')">
+                                    <span class="checkmark"></span>
+                                    <span>実践したらチェック</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', itemHtml);
+            });
+
+            updateProgress(calculatedTasks);
+        }
+
+        function toggleTask(id) {
+            const chk = document.getElementById(`chk-${id}`);
+            const item = document.getElementById(`item-${id}`);
+            if (chk.checked) {
+                localStorage.setItem(`checked_${id}`, 'true');
+                item.classList.add('completed');
+            } else {
+                localStorage.removeItem(`checked_${id}`);
+                item.classList.remove('completed');
+            }
+            // プログレスバーの更新
+            const calculatedTasks = getTargetDates(document.getElementById('sleep-time').value, routineTemplates);
+            updateProgress(calculatedTasks);
+        }
+
+        function updateProgress(tasks) {
+            let checkedCount = 0;
+            tasks.forEach(task => {
+                if (localStorage.getItem(`checked_${task.id}`) === 'true') {
+                    checkedCount++;
+                }
+            });
+            const percent = Math.round((checkedCount / tasks.length) * 100);
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            document.getElementById('progress-text').innerText = `今夜の快眠準備度: ${percent}%`;
+            document.getElementById('progress-count').innerText = `${checkedCount} / ${tasks.length} 項目`;
+        }
+
+        function resetChecks() {
+            if (confirm('今夜の実践記録をリセットしますか？')) {
+                routineTemplates.forEach(task => {
+                    localStorage.removeItem(`checked_${task.id}`);
+                });
+                renderTimeline();
+            }
+        }
+
+        // --- 4-7-8 Breathing Exercise Logic ---
+        let breathInterval = null;
+        let breathCycleCount = 0;
+
+        function toggleBreathing() {
+            const btn = document.getElementById('btn-breath-toggle');
+            if (breathInterval) {
+                // 停止処理
+                clearInterval(breathInterval);
+                breathInterval = null;
+                resetBreathingUI();
+                btn.innerText = 'スタート';
+            } else {
+                // 開始処理
+                btn.innerText = 'ストップ';
+                runBreathingCycle();
+            }
+        }
+
+        function resetBreathingUI() {
+            const circle = document.getElementById('breath-circle');
+            const status = document.getElementById('breath-status');
+            const timer = document.getElementById('breath-timer');
+            
+            circle.style.transform = 'scale(1)';
+            circle.style.background = 'radial-gradient(circle, rgba(129, 140, 248, 0.6) 0%, rgba(79, 70, 229, 0.6) 100%)';
+            circle.style.boxShadow = '0 0 25px rgba(99, 102, 241, 0.4)';
+            status.innerText = '呼吸法を始める';
+            timer.innerText = '';
+        }
+
+        function runBreathingCycle() {
+            const circle = document.getElementById('breath-circle');
+            const status = document.getElementById('breath-status');
+            const timer = document.getElementById('breath-timer');
+
+            const phases = [
+                { name: '息を吸う (鼻から)', duration: 4, scale: 1.8, bg: 'radial-gradient(circle, rgba(59, 130, 246, 0.7) 0%, rgba(29, 78, 216, 0.7) 100%)', shadow: 'rgba(59, 130, 246, 0.6)' },
+                { name: '息を止める', duration: 7, scale: 1.8, bg: 'radial-gradient(circle, rgba(16, 185, 129, 0.7) 0%, rgba(4, 120, 87, 0.7) 100%)', shadow: 'rgba(16, 185, 129, 0.6)' },
+                { name: '息を吐き出す (口から)', duration: 8, scale: 1.0, bg: 'radial-gradient(circle, rgba(236, 72, 153, 0.7) 0%, rgba(190, 24, 74, 0.7) 100%)', shadow: 'rgba(236, 72, 153, 0.6)' }
+            ];
+
+            let currentPhaseIdx = 0;
+            let secondsLeft = phases[currentPhaseIdx].duration;
+
+            const updateUI = () => {
+                const phase = phases[currentPhaseIdx];
+                status.innerText = phase.name;
+                timer.innerText = secondsLeft;
+                circle.style.transform = `scale(${phase.scale})`;
+                circle.style.background = phase.bg;
+                circle.style.boxShadow = `0 0 35px ${phase.shadow}`;
+                
+                // フェーズ切り替えアニメーション速度を動的に調整
+                if (currentPhaseIdx === 0) {
+                    circle.style.transition = 'transform 4s linear, background 1s ease';
+                } else if (currentPhaseIdx === 2) {
+                    circle.style.transition = 'transform 8s linear, background 1s ease';
+                } else {
+                    circle.style.transition = 'transform 0.5s ease, background 1s ease';
+                }
+            };
+
+            updateUI();
+
+            breathInterval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft <= 0) {
+                    currentPhaseIdx = (currentPhaseIdx + 1) % 3;
+                    secondsLeft = phases[currentPhaseIdx].duration;
+                }
+                updateUI();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
